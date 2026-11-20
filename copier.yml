@@ -1,0 +1,46 @@
+_subdirectory: template
+_answers_file: .copier-answers.yml
+_min_copier_version: "9.4"
+_skip_if_exists:
+  - src/**
+  - README.md
+_tasks:
+  - command: git init -q -b main
+    when: "{{ _copier_operation == 'copy' }}"
+  - command: mise trust --quiet && mise install --quiet && mise run setup
+    when: "{{ run_setup and _copier_operation == 'copy' }}"
+_message_after_copy: |
+  Created {{ project_name }}.
+
+    cd {{ _copier_conf.dst_path }}
+    mise run setup     # if you skipped it: bun install + hk git hooks
+    mise run check     # format, lint, typecheck, test
+
+  Pull later template changes with: copier update --trust
+
+project_name:
+  type: str
+  help: Package name (lowercase, dashes)
+  validator: >-
+    {% if not (project_name | regex_search('^[a-z][a-z0-9-]*$')) %}
+    Use lowercase letters, digits and dashes, starting with a letter.
+    {% endif %}
+
+description:
+  type: str
+  help: One-line description
+  default: ""
+
+deploy_target:
+  type: str
+  help: Where does this run?
+  choices:
+    Cloudflare Workers (cf CLI + cloudflare.config.ts): cloudflare
+    Container (Wolfi base, nonroot): container
+    Nothing yet (library / CLI): none
+  default: cloudflare
+
+run_setup:
+  type: bool
+  help: Install tools, dependencies and git hooks now?
+  default: true

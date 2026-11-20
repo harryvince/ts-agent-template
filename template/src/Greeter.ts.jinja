@@ -1,0 +1,28 @@
+import { Context, Effect, Layer, Schema, String } from "effect";
+
+export class EmptyNameError extends Schema.TaggedError<
+  EmptyNameError,
+  { readonly brand: unique symbol }
+>()("EmptyNameError", {}) {}
+
+export class Greeter extends Context.Service<
+  Greeter,
+  {
+    readonly greet: (name: string) => Effect.Effect<string, EmptyNameError>;
+  }
+>()("{{ project_name }}/Greeter") {
+  static readonly layer = Layer.succeed(
+    Greeter,
+    Greeter.of({
+      greet: Effect.fn("Greeter.greet")(function* (name: string) {
+        const trimmed = String.trim(name);
+
+        if (String.isEmpty(trimmed)) {
+          return yield* new EmptyNameError();
+        }
+
+        return `Hello, ${trimmed}!`;
+      }),
+    }),
+  );
+}

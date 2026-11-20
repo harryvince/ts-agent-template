@@ -1,0 +1,101 @@
+{
+  "$schema": "./node_modules/@effect/tsgo/oxlint-schema.json",
+  "extends": [
+    "./node_modules/@interfere/landmines/configs/recommended.json",
+    "./node_modules/@effect/tsgo/oxlint-presets/recommended.json",
+    "./node_modules/@effect/tsgo/oxlint-presets/effect-native.json"
+  ],
+  "plugins": ["eslint", "typescript", "unicorn", "oxc", "import", "promise"],
+  "categories": {
+    "correctness": "error",
+    "suspicious": "error",
+    "perf": "error"
+  },
+  "options": {
+    "typeAware": true,
+    "reportUnusedDisableDirectives": "error"
+  },
+  "env": { "builtin": true },
+  "ignorePatterns": [
+    ".agent/**",
+    ".agents/**",
+    ".claude/**",
+    ".codex/**",
+    ".continue/**",
+    ".cursor/**",
+    ".gemini/**",
+    ".opencode/**",
+    ".pi/**",
+    ".roo/**",
+    ".windsurf/**",
+    "node_modules/**",
+    "dist/**",
+    ".cloudflare/**",
+    "tools/oxlint/anti-slop/**"
+  ],
+  "jsPlugins": [
+    { "name": "anti-slop", "specifier": "./tools/oxlint/anti-slop/index.ts" },
+    { "name": "anti-slop-effect", "specifier": "./tools/oxlint/anti-slop/effect/index.ts" }
+  ],
+  "rules": {
+    "oxc/no-accumulating-spread": "error",
+    "typescript/no-explicit-any": "error",
+    "anti-slop/no-array-filter-map": "error",
+    "anti-slop/no-reduce-accumulator-copy": "error",
+    "anti-slop/no-chained-type-assertions": "error",
+    "anti-slop/no-conditional-empty-object-spread": "error",
+    "anti-slop/no-known-value-widening": "error",
+    "anti-slop/no-module-mocking": "error",
+    "anti-slop/no-object-parameters": "error",
+    "anti-slop/no-reflect-apply": "error",
+    "anti-slop/no-reflect-get": "error",
+    "anti-slop/no-runtime-typeof": "error",
+    "anti-slop/no-shape-in-symbol-names": "error",
+    "anti-slop/no-unknown-parameters": "error",
+    "anti-slop/no-unknown-returns": "error",
+    "anti-slop/no-unknown-type-aliases": "error",
+    "anti-slop/no-unsafe-dictionary-type": "error",
+    "anti-slop/no-widen-then-assert": "error",
+    "anti-slop/require-readable-spacing": "error",
+    "anti-slop/require-safety-comment-for-type-assertion": "error",
+    "anti-slop-effect/no-manual-effect-error-tag": "error",
+    "anti-slop-effect/no-manual-tag-comparison": "error",
+    "anti-slop-effect/no-manual-tagged-construction": "error",
+    "anti-slop-effect/no-service-constructor-imports": "error",
+    "anti-slop-effect/prefer-effect-match": "error",
+    "landmines-style/no-comments": ["error", { "allow": ["WARNING", "SAFETY"] }],
+    "effecttsgo/unstable-api-usage": "off",
+    "eslint/no-restricted-imports": [
+      "error",
+      {
+        "paths": [
+          { "name": "bun:test", "message": "Use @effect/vitest (it.effect, layer)." },
+          { "name": "jest", "message": "Use @effect/vitest." },
+          { "name": "zod", "message": "Use effect/Schema." },
+          {
+            "name": "dotenv",
+            "message": "Bun loads .env natively; read config with effect/Config."
+          },
+          { "name": "node-fetch", "message": "Use effect/http HttpClient." },
+          { "name": "axios", "message": "Use effect/http HttpClient." },
+          { "name": "lodash", "message": "Use effect/Array, effect/Record, effect/String." },
+          { "name": "ramda", "message": "Use effect modules." },
+          { "name": "fp-ts", "message": "Use effect." },
+          { "name": "uuid", "message": "Use crypto.randomUUID() or Bun.randomUUIDv7()." },
+          { "name": "ws", "message": "Bun has native WebSocket support." },
+          { "name": "better-sqlite3", "message": "Use bun:sqlite." },
+          { "name": "pg", "message": "Use Bun.sql." },
+          { "name": "glob", "message": "Use effect/Glob or Bun.Glob." }
+        ]
+      }
+    ]
+  },
+  "overrides": [
+    {
+      "files": ["*.config.ts"],
+      "rules": {
+        "import/no-default-export": "off"
+      }
+    }
+  ]
+}

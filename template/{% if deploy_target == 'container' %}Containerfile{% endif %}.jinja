@@ -1,0 +1,20 @@
+# syntax=docker/dockerfile:1
+# Build: Wolfi + Bun compiles the app to a single binary.
+FROM cgr.dev/chainguard/wolfi-base:latest AS build
+RUN apk add --no-cache bun=1.4.5-r0
+WORKDIR /app
+COPY package.json bun.lock bunfig.toml ./
+RUN bun install --frozen-lockfile --ignore-scripts --production
+COPY tsconfig.json ./
+COPY src ./src
+RUN bun build src/main.ts --compile --minify --sourcemap --outfile /app/server
+
+# Runtime: distroless glibc image, no shell or package manager, runs as nonroot (65532).
+FROM cgr.dev/chainguard/glibc-dynamic:latest
+WORKDIR /app
+COPY --from=build --chown=nonroot:nonroot /app/server /app/server
+USER nonroot
+ENV PORT=8080
+EXPOSE 8080
+HEALTHCHECK NONE
+ENTRYPOINT ["/app/server"]

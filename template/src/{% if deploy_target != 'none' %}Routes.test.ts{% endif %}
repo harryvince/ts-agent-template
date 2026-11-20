@@ -1,0 +1,26 @@
+import { BunHttpServer } from "@effect/platform-bun";
+import { assert, layer } from "@effect/vitest";
+import { Effect, Layer } from "effect";
+import { HttpClient, HttpRouter } from "effect/http";
+import { Routes } from "./Routes.ts";
+
+const TestServer = HttpRouter.serve(Routes).pipe(Layer.provideMerge(BunHttpServer.layerTest));
+
+layer(TestServer)("Routes", (it) => {
+  it.effect("GET / greets the world", () =>
+    Effect.gen(function* () {
+      const response = yield* HttpClient.get("/");
+
+      assert.strictEqual(response.status, 200);
+      assert.strictEqual(yield* response.text, "Hello, world!");
+    }),
+  );
+
+  it.effect("GET /health is ok", () =>
+    Effect.gen(function* () {
+      const response = yield* HttpClient.get("/health");
+
+      assert.strictEqual(yield* response.text, "ok");
+    }),
+  );
+});

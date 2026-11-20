@@ -1,0 +1,7 @@
+*
+!package.json
+!bun.lock
+!bunfig.toml
+!tsconfig.json
+!src/
+src/**/*.test.ts

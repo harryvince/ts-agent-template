@@ -1,0 +1,10 @@
+# Default config for every `trivy fs` / `trivy config` / `trivy image` run (mise tasks + hooks).
+severity:
+  - HIGH
+  - CRITICAL
+exit-code: 1
+skip-dirs:
+  - node_modules
+  - .cloudflare
+pkg:
+  include-dev-deps: true

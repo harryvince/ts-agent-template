@@ -1,0 +1,64 @@
+amends "package://github.com/jdx/hk/releases/download/v2.13.0/hk@2.13.0#/Config.pkl"
+
+// Git hooks. Installed by `mise run setup`. Mandatory: never bypass with --no-verify or HK=0.
+// Every step shells out to the same commands as the mise tasks, so hooks, CI and agents agree.
+
+local code = List("**/*.ts", "**/*.tsx", "**/*.js", "**/*.mjs", "**/*.cjs")
+local vendored = List("tools/oxlint/anti-slop/**", ".cloudflare/**")
+
+local fast: Mapping<String, Step> = new {
+  ["format"] {
+    glob = List("**/*.{ts,tsx,js,mjs,cjs,json,jsonc,md,yml,yaml,toml}")
+    exclude = vendored
+    check = "bun --bun oxfmt --check --no-error-on-unmatched-pattern {{files}}"
+    fix = "bun --bun oxfmt --no-error-on-unmatched-pattern {{files}}"
+  }
+  ["lint"] {
+    glob = code
+    exclude = vendored
+    depends = "format"
+    check = "bun --bun effect-tsgo oxlint --type-aware --deny-warnings {{files}}"
+    fix = "bun --bun effect-tsgo oxlint --type-aware --deny-warnings --fix {{files}}"
+  }
+  ["typecheck"] {
+    glob = code
+    check = "mise run typecheck"
+  }
+  ["test"] {
+    glob = code
+    check = "mise run test"
+  }
+  ["secrets"] {
+    check = "mise run scan:secrets"
+  }
+  ["semgrep"] {
+    glob = List("**/*.{ts,tsx,js,mjs,cjs,json,yml,yaml}", "**/Containerfile", "**/Dockerfile")
+    exclude = vendored
+    check = "mise run scan:code {{files}}"
+  }
+  ["deps"] {
+    glob = List("package.json", "bun.lock")
+    check = "mise run scan:deps"
+  }
+  ["iac"] {
+    glob = List("**/Containerfile", "**/Dockerfile", ".github/workflows/*.yml")
+    check = "mise run scan:config"
+  }
+}
+
+// `hk check` / `hk fix` / `hk check --all` use these.
+steps = fast
+
+hooks {
+  ["pre-commit"] {
+    fix = true
+    stash = "git"
+    steps = fast
+  }
+  ["pre-push"] {
+    steps {
+      ["check"] { check = "mise run check" }
+      ["scan"] { check = "mise run scan" }
+    }
+  }
+}

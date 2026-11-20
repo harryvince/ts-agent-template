@@ -1,0 +1,41 @@
+{%- if deploy_target == "cloudflare" -%}
+import { Layer } from "effect";
+import { HttpRouter, HttpServer } from "effect/http";
+import { Routes } from "./Routes.ts";
+
+const { handler } = HttpRouter.toWebHandler(Routes.pipe(Layer.provide(HttpServer.layerServices)));
+
+export default {
+  fetch(request: Request) {
+    return handler(request);
+  },
+} satisfies ExportedHandler;
+{%- elif deploy_target == "container" -%}
+import { BunHttpServer, BunRuntime } from "@effect/platform-bun";
+import { Config, Effect, Layer } from "effect";
+import { HttpRouter } from "effect/http";
+import { Routes } from "./Routes.ts";
+
+const ServerLive = Layer.unwrap(
+  Effect.gen(function* () {
+    const port = yield* Config.Port("PORT").pipe(Config.withDefault(8080));
+
+    return BunHttpServer.layer({ port });
+  }),
+);
+
+Layer.launch(HttpRouter.serve(Routes).pipe(Layer.provide(ServerLive))).pipe(BunRuntime.runMain);
+{%- else -%}
+import { BunRuntime } from "@effect/platform-bun";
+import { Effect } from "effect";
+import { Greeter } from "./Greeter.ts";
+
+const program = Effect.gen(function* () {
+  const greeter = yield* Greeter;
+  const message = yield* greeter.greet("world");
+
+  yield* Effect.log(message);
+});
+
+program.pipe(Effect.provide(Greeter.layer), BunRuntime.runMain);
+{%- endif %}

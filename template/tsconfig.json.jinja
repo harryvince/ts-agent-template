@@ -1,0 +1,35 @@
+{
+  "$schema": "./node_modules/@effect/tsgo/schema.json",
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "Preserve",
+    "moduleResolution": "Bundler",
+    "lib": ["ESNext"],
+    "types": ["bun"],
+    "moduleDetection": "force",
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "noEmit": true,
+    "strict": true,
+    "exactOptionalPropertyTypes": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "noPropertyAccessFromIndexSignature": true,
+    "skipLibCheck": true,
+    "plugins": [
+      {
+        "name": "@effect/language-service",
+        "ignoreEffectWarningsInTscExitCode": false,
+        "ignoreEffectSuggestionsInTscExitCode": true,
+        "diagnosticSeverity": { "unstableApiUsage": "off" }
+      }
+    ]
+  },
+{%- if deploy_target == "cloudflare" %}
+  "include": ["src", "*.ts", ".cloudflare/types"],
+{%- else %}
+  "include": ["src", "*.ts"],
+{%- endif %}
+  "exclude": ["node_modules", "dist", "tools/oxlint/anti-slop"]
+}

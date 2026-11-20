@@ -1,0 +1,120 @@
+# AGENTS.md
+
+`{{ project_name }}`{% if description %}: {{ description }}{% endif %}
+
+TypeScript on Bun with Effect.
+{%- if deploy_target == "cloudflare" %} Deploys to Cloudflare Workers with the `cf` CLI.
+{%- elif deploy_target == "container" %} Ships as a Wolfi-based container that runs as nonroot.
+{%- endif %} Generated from the `ts-agent-template` Copier template. See `.copier-answers.yml`.
+
+## Commands
+
+```bash
+mise install            # toolchain (bun, hk, trivy, semgrep, ...)
+mise run setup          # bun install + hk git hooks
+mise run check          # format:check + lint + typecheck + test. Must pass before you say you're done.
+mise run fix            # oxlint --fix + oxfmt until stable
+mise run scan           # trivy (secrets, deps, config) + semgrep
+mise tasks              # list everything else
+hk check --all          # every git-hook step over every file (this is what CI runs)
+```
+
+Use the mise tasks. Don't invent equivalent commands.
+
+## The feedback loop is mandatory
+
+- **Git hooks (hk) are mandatory.** Never use `--no-verify`, `git commit -n`, `HK=0` or `HK_SKIP_*`, and never touch `core.hooksPath`. If a hook fails, fix the cause and commit again.
+- **Never weaken the rules to get green.** Don't edit `.oxlintrc.json`, `tsconfig.json`, `hk.pkl`, `trivy.yaml`, `.semgrepignore` or `tools/oxlint/` to make a failure go away. Don't add `oxlint-disable`, `@ts-ignore`, `@ts-expect-error`, `nosemgrep`, `trivy:ignore` or `as unknown as`. If you believe a rule is wrong, stop and ask the human.
+- **Read the whole diagnostic.** Every rule message says what to do instead. Do that.
+- The Claude Code hooks in `.claude/` enforce this. They block bypasses, lint each file you edit, and stop you from finishing while `mise run check` fails. CI runs `hk check --all`, so a skipped local hook still fails the PR.
+
+## Tooling
+
+- **mise** owns every tool outside npm: Bun, hk, Trivy, Semgrep, uv{% if deploy_target == "cloudflare" %}, Node (only for `cf`){% endif %}. Pin exact versions in `mise.toml`. Never use global installs, `curl | sh`, brew or apt for project tools.
+- **Bun** is the package manager, runtime and bundler. Use `bun add -E` / `bun add -dE` (exact pins), `bunx` and `bun build`. Tests use `@effect/vitest`, running on the Bun runtime (`mise run test`). Never use npm, npx, pnpm or yarn.
+- **Prefer Bun built-ins over packages:** `Bun.serve`, `Bun.file`/`Bun.write`, `Bun.$`, `Bun.Glob`, `Bun.password`, `Bun.hash`, `Bun.sql` (Postgres), `bun:sqlite`, `Bun.redis`, `Bun.s3`, native `.env` loading, native WebSocket, `bun build --compile`. Only add a dependency when neither Bun nor Effect covers it, and say why in the commit message.
+- **Formatting:** oxfmt (`mise run format`). `bun fmt` exists, but stays off until it formats everything natively. Check with `bun fmt --doctor`.
+- **Linting:** oxlint, with type-aware rules via tsgolint, run through `effect-tsgo` so the Effect rules load. `bun lint` doesn't exist yet. The stack:
+  - oxlint `correctness`, `suspicious` and `perf` categories
+  - [anti-slop](https://github.com/dmmulroy/anti-slop) (vendored in `tools/oxlint/anti-slop/`) plus its Effect rules
+  - [landmines](https://github.com/interfere-inc/landmines) recommended set
+  - `@effect/tsgo` recommended and effect-native presets
+  - a banned-imports list in `.oxlintrc.json` that points at the Bun or Effect replacement
+- **Typecheck:** TypeScript 7 (`tsc` in Go), patched by `@effect/tsgo` so Effect diagnostics are compile errors. Effect _warnings_ fail the build.
+
+## Effect
+
+All application logic is Effect. Before writing anything by hand:
+
+1. **Check Effect for a native option.** Most needs are already covered: `Schema` (validation and parsing; never zod), `Config` (env/config), `effect/http` (`HttpClient`, `HttpRouter`, `HttpApi`), `FileSystem`, `Path`, `Stream`, `Schedule` (retries and backoff), `Cache`, `Queue`/`PubSub`, `Match`, `Array`/`Record`/`String`/`Option`/`Result`, `DateTime`, `Duration`, `Logger`/`Metric`/tracing, `effect/cli`, `effect/sql`.
+2. **Check the installed library before guessing.** The npm package ships agent docs and full source for the exact installed version:
+   - `node_modules/effect/AGENTS.md`: style guide; read it first
+   - `node_modules/effect/ai-docs/src/`: worked examples by topic (services, errors, schema, http, testing, ...)
+   - `node_modules/effect/src/` and `node_modules/@effect/platform-bun/src/`: the real APIs. Grep here. Don't rely on memory: Effect 4 renamed a lot (`Context.Service`, `effect/http`, `Schema.TaggedError`).
+3. Only then write it yourself, in Effect style.
+
+Conventions:
+
+- Services are `class X extends Context.Service<X, Shape>()("{{ project_name }}/X")` with a `static layer`. Wire layers once, at the entrypoint (`src/main.ts`).
+- Functions are `Effect.fn("Name.method")(function* () {...})`. Use `Effect.gen` inline.
+- Errors are `Schema.TaggedError` classes, handled with `Effect.catchTag`/`Match`. Never throw, and never compare `_tag` by hand.
+- Parse external data at the boundary with `Schema`. Don't pass around `unknown`, and don't use `typeof` checks.
+- Logging: `Effect.log*`, never `console.*`.
+
+## Code standards
+
+- No comments, except `// SAFETY:` above a type assertion (required) and `// WARNING:` for real hazards. Names and types carry the meaning.
+- Don't annotate return types; let them be inferred. Use `satisfies` to pin a contract.
+- Strict TS: `exactOptionalPropertyTypes`, `noUncheckedIndexedAccess`, and `verbatimModuleSyntax` (use `import type`). Relative imports use the `.ts` extension.
+- Use `PascalCase.ts` for modules that export a service or class, and `camelCase.ts` otherwise.
+
+## Tests
+
+- `@effect/vitest` (`mise run test`). Never use `bun:test`. Tests sit next to their subject: `src/Foo.ts` → `src/Foo.test.ts`. Use the suffixes `.test.ts`, `.fixture.ts` and `.test-utils.ts` only.
+- Write tests as Effects: `it.effect(...)`. Provide dependencies with `layer(SomeLayer)("suite", (it) => ...)`, not `Effect.provide` inside the test. Use `assert` from `@effect/vitest`.
+- **No mocks.** Don't use `vi.mock`, spies on the code under test, or module mocking. Swap dependencies by providing a different Layer (an in-memory implementation). Test HTTP against a real server with `BunHttpServer.layerTest` and `HttpClient`{% if deploy_target != "none" %} (see `src/Routes.test.ts`){% endif %}.
+- Control time with `TestClock` (`it.effect` provides it). Use `it.live` only when you really need the real clock. No fixed sleeps, retries or raised timeouts to hide flakiness.
+- Patterns: `node_modules/effect/ai-docs/src/09_testing/`.
+
+## Layout
+
+- `src/main.ts`: entrypoint. The only place layers are provided and the runtime is started.
+- `src/Greeter.ts`: example service. Delete it once you have real ones.
+{%- if deploy_target != "none" %}
+- `src/Routes.ts`: HTTP routes (`effect/http` `HttpRouter`).
+{%- endif %}
+{%- if deploy_target == "cloudflare" %}
+- `cloudflare.config.ts`: Worker config (`cf/config`). There is no wrangler.jsonc.
+- `vite.config.ts`: Cloudflare Vite plugin v2, which `cf dev`/`build`/`deploy` drive.
+{%- elif deploy_target == "container" %}
+- `Containerfile`: Wolfi build stage → `bun build --compile` → `cgr.dev/chainguard/glibc-dynamic`, `USER nonroot`.
+{%- endif %}
+- `tools/oxlint/anti-slop/`: vendored lint rules (see `UPSTREAM.md`). This is owned code; don't edit it to pass lint.
+- `hk.pkl`: git hooks. Steps call the mise tasks.
+- `.claude/`: agent guardrail hooks.
+
+## Deploy
+{% if deploy_target == "cloudflare" %}
+- Use Cloudflare's `cf` CLI with `cloudflare.config.ts`. Never use wrangler or `wrangler.jsonc`.
+- `mise run dev` → `cf dev`. `mise run build` → `cf build` (output goes to `.cloudflare/output`, and `Env` types to `.cloudflare/types`). Use `mise run deploy:dry-run` before `mise run deploy`.
+- Declare bindings in `cloudflare.config.ts` with the `bindings.*` builders, then read them with `import { env } from "cloudflare:workers"`.
+- Find commands with `bunx cf cli search "<task>"` and docs with `bunx cf docs search "<question>"`. Keep queries anonymous.
+- Don't deploy unless the human asks.
+{% elif deploy_target == "container" %}
+- The image runs as `nonroot` (UID 65532) on a distroless Chainguard base. Never add `USER root`, a shell, or a package manager to the runtime stage.
+- Build stages use `cgr.dev/chainguard/wolfi-base` and add tools with `apk add` pinned to an exact version.
+- `mise run image:build`, `mise run image:scan` (Trivy must pass), `mise run image:run`.
+- Prefer Cloudflare Workers when a container isn't actually required.
+{% else %}
+- Not deployed yet. If it needs to run somewhere, prefer Cloudflare Workers (`cf` CLI + `cloudflare.config.ts`). If it must be a container, use a Wolfi/Chainguard base with `USER nonroot`. Re-run `copier update` and pick the target to get the scaffolding.
+{% endif %}
+## Security
+
+- Pre-commit runs Trivy secret scanning and Semgrep (`SEMGREP_RULES` in `mise.toml`). When `bun.lock` changes it also runs the Trivy dependency scan, and when a Containerfile or workflow changes it runs the Trivy config scan.
+- `bunfig.toml` refuses package versions younger than 3 days, and pins dependencies exactly.
+- Never commit `.env*` or `.dev.vars*`. Read secrets through `Config.redacted`.
+- If a scan flags a dependency, upgrade it. Don't ignore it.
+
+## Template
+
+Standards come from the Copier template. To pull in template improvements, run `copier update --trust` and resolve the conflicts. Make project-specific changes here, and generic improvements in the template.

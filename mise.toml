@@ -1,0 +1,14 @@
+# Tooling for working on the template itself. Generated projects get their own mise.toml.
+[tools]
+copier = "9.19.1"
+bun = "1.4.5"
+hk = "2.13.0"
+pkl = "0.33.1"
+
+[tasks.test]
+description = "Render every deploy target into a temp dir and run its full check + scan."
+run = "bun tests/render.ts"
+
+[tasks."test:quick"]
+description = "Render every deploy target and run check only (no security scans)."
+run = "bun tests/render.ts --quick"

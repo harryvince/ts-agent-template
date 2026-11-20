@@ -1,0 +1,30 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-{% raw %}${{ github.ref }}{% endraw %}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: jdx/mise-action@90f833d396d0cc3674b631d2d225e306476c303a # v5.2.10
+      - run: bun install --frozen-lockfile
+      # Same steps as the git hooks, over every file: format, lint, typecheck, test, secrets, semgrep, trivy.
+      - run: hk check --all
+{%- if deploy_target == "cloudflare" %}
+      - run: mise run build
+{%- elif deploy_target == "container" %}
+      - run: mise run image:scan
+{%- endif %}

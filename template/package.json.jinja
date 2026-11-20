@@ -1,0 +1,49 @@
+{
+  "name": "{{ project_name }}",
+  "version": "0.0.0",
+  "private": true,
+  "description": "{{ description }}",
+  "type": "module",
+  "scripts": {
+    "prepare": "effect-tsgo patch --typescript --oxlint{% if deploy_target == "cloudflare" %} && cf workers types{% endif %}",
+{%- if deploy_target == "cloudflare" %}
+    "dev": "cf dev",
+    "build": "cf build",
+    "deploy": "cf deploy",
+{%- elif deploy_target == "container" %}
+    "dev": "bun --watch src/main.ts",
+    "build": "bun build src/main.ts --compile --minify --sourcemap --outfile dist/{{ project_name }}",
+{%- else %}
+    "dev": "bun --watch src/main.ts",
+{%- endif %}
+    "test": "bun --bun vitest run",
+    "typecheck": "effect-tsgo tsc -p tsconfig.json",
+    "lint": "effect-tsgo oxlint --type-aware --deny-warnings",
+    "format": "oxfmt",
+    "format:check": "oxfmt --check"
+  },
+  "dependencies": {
+    "@effect/platform-bun": "4.1.4",
+    "effect": "4.1.4"
+  },
+  "devDependencies": {
+{%- if deploy_target == "cloudflare" %}
+    "@cloudflare/vite-plugin": "2.0.0-rc.0",
+{%- endif %}
+    "@effect/tsgo": "0.70.0",
+    "@effect/vitest": "4.1.4",
+    "@interfere/landmines": "0.1.1",
+    "@oxlint/plugins": "1.94.0",
+    "@types/bun": "1.4.4",
+{%- if deploy_target == "cloudflare" %}
+    "cf": "1.0.0-rc.0",
+{%- endif %}
+    "oxfmt": "0.79.0",
+    "oxlint": "1.94.0",
+    "oxlint-tsgolint": "7.0.2007",
+    "typescript": "7.0.2",{% if deploy_target == "cloudflare" %}
+    "vite": "8.3.8",{% endif %}
+    "vitest": "5.1.0"
+  },
+  "packageManager": "bun@1.4.5"
+}

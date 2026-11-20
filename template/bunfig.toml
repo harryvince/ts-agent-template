@@ -1,0 +1,8 @@
+[install]
+# Pin exact versions on `bun add`.
+exact = true
+# Supply-chain guard: don't install package versions published in the last 3 days.
+minimumReleaseAge = 259200
+# landmines 0.1.x adds the no-comments `allow` option that lets anti-slop's SAFETY comments through.
+# Remove this exclusion once 0.1.1 is older than 3 days (after 2026-11-22).
+minimumReleaseAgeExcludes = ["@interfere/landmines"]

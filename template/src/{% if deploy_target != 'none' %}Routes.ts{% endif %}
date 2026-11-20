@@ -1,0 +1,18 @@
+import { Effect, Layer } from "effect";
+import { HttpRouter, HttpServerResponse } from "effect/http";
+import { Greeter } from "./Greeter.ts";
+
+export const Routes = Layer.unwrap(
+  Effect.gen(function* () {
+    const greeter = yield* Greeter;
+
+    return Layer.mergeAll(
+      HttpRouter.add("GET", "/health", HttpServerResponse.text("ok")),
+      HttpRouter.add(
+        "GET",
+        "/",
+        greeter.greet("world").pipe(Effect.map((message) => HttpServerResponse.text(message))),
+      ),
+    );
+  }),
+).pipe(Layer.provide(Greeter.layer));

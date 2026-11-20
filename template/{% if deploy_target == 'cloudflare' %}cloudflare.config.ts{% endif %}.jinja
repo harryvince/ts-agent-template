@@ -1,0 +1,11 @@
+import { defineConfig } from "cf/config";
+
+export default defineConfig({
+  worker: {
+    name: "{{ project_name }}",
+    entrypoint: "./src/main.ts",
+    compatibilityDate: "2026-11-20",
+    compatibilityFlags: ["nodejs_compat"],
+    observability: { enabled: true },
+  },
+});

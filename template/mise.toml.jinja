@@ -1,0 +1,116 @@
+# All tooling outside npm lives here. `mise install` then `mise run setup`.
+# Run `mise tasks` to list everything. Agents: use these tasks, not ad-hoc commands.
+
+[tools]
+bun = "1.4.5"
+hk = "2.13.0"
+pkl = "0.33.1"
+trivy = "0.76.2"
+uv = "0.13.1"
+"pipx:semgrep" = { version = "1.186.0", uvx_args = "--python 3.14" }
+{%- if deploy_target == "cloudflare" %}
+# cf (Cloudflare CLI) loads cloudflare.config.ts with Node; Bun is not supported for that yet.
+node = "26.13.1"
+{%- endif %}
+
+[settings]
+lockfile = true
+pipx.uvx = true
+
+[env]
+# Semgrep rulesets, used by `mise run scan:code` and the pre-commit hook.
+SEMGREP_RULES = "p/default p/typescript p/javascript p/nodejs p/secrets p/github-actions p/dockerfile"
+SEMGREP_SEND_METRICS = "off"
+
+[tasks.setup]
+description = "Install dependencies and the mandatory hk git hooks."
+run = ["bun install", "hk install --mise"]
+
+[tasks.dev]
+description = "Run the app locally with reload."
+run = "bun run dev"
+
+{%- if deploy_target != "none" %}
+
+[tasks.build]
+description = "Build the deployable artifact."
+run = "bun run build"
+{%- endif %}
+
+[tasks.test]
+description = "Run the test suite (@effect/vitest on the Bun runtime)."
+run = "bun --bun vitest run"
+
+[tasks.typecheck]
+description = "Typecheck with TypeScript 7 + Effect diagnostics (Effect warnings fail)."
+run = "bun --bun effect-tsgo tsc -p tsconfig.json"
+
+[tasks.lint]
+description = "oxlint (type-aware) + anti-slop + landmines + Effect rules. Warnings fail."
+run = "bun --bun effect-tsgo oxlint --type-aware --deny-warnings"
+
+[tasks.format]
+description = "Format with oxfmt."
+run = "bun --bun oxfmt"
+
+[tasks."format:check"]
+description = "Check formatting without writing."
+run = "bun --bun oxfmt --check"
+
+[tasks.fix]
+description = "Apply lint autofixes and formatting until stable."
+run = [
+  "bun --bun effect-tsgo oxlint --type-aware --fix --quiet || true",
+  "bun --bun oxfmt",
+  "bun --bun effect-tsgo oxlint --type-aware --fix --quiet || true",
+  "bun --bun oxfmt",
+]
+
+[tasks.check]
+description = "Everything an agent must pass before saying it is done."
+depends = ["format:check", "lint", "typecheck", "test"]
+
+[tasks."scan:secrets"]
+description = "Trivy secret scan of the working tree."
+run = "trivy fs --scanners secret --exit-code 1 --quiet ."
+
+[tasks."scan:deps"]
+description = "Trivy vulnerability scan of bun.lock (dev deps included)."
+run = "trivy fs --scanners vuln --include-dev-deps --exit-code 1 --quiet ."
+
+[tasks."scan:config"]
+description = "Trivy misconfiguration scan (Containerfile, workflows)."
+run = "trivy config --exit-code 1 --quiet ."
+
+[tasks."scan:code"]
+description = "Semgrep SAST. Pass files to limit the scan; defaults to the whole repo."
+run = "semgrep scan --error --quiet --disable-version-check --skip-unknown-extensions"
+
+[tasks.scan]
+description = "All security scans."
+depends = ["scan:secrets", "scan:deps", "scan:config", "scan:code"]
+{%- if deploy_target == "cloudflare" %}
+
+[tasks.deploy]
+description = "Build and deploy the Worker with the cf CLI (cloudflare.config.ts)."
+run = "bun run deploy"
+
+[tasks."deploy:dry-run"]
+description = "Build and validate the Worker upload without deploying."
+run = "bun run deploy --dry-run"
+{%- elif deploy_target == "container" %}
+
+[tasks."image:build"]
+description = "Build the Wolfi-based, nonroot container image."
+run = "docker build -f Containerfile -t {{ project_name }}:dev ."
+
+[tasks."image:scan"]
+description = "Trivy scan of the built image (OS packages + misconfig)."
+depends = ["image:build"]
+run = "trivy image --exit-code 1 --quiet {{ project_name }}:dev"
+
+[tasks."image:run"]
+description = "Run the built image locally."
+depends = ["image:build"]
+run = "docker run --rm {{ project_name }}:dev"
+{%- endif %}
