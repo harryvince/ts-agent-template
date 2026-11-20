@@ -6,6 +6,13 @@
     ".agents/**",
     ".claude/**",
     ".codex/**",
+    ".continue/**",
+    ".cursor/**",
+    ".gemini/**",
+    ".opencode/**",
+    ".pi/**",
+    ".roo/**",
+    ".windsurf/**",
     ".cloudflare/**",
     "tools/oxlint/anti-slop/**",
     ".copier-answers.yml"

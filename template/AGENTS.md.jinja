@@ -26,7 +26,7 @@ Use the mise tasks. Don't invent equivalent commands.
 - **Git hooks (hk) are mandatory.** Never use `--no-verify`, `git commit -n`, `HK=0` or `HK_SKIP_*`, and never touch `core.hooksPath`. If a hook fails, fix the cause and commit again.
 - **Never weaken the rules to get green.** Don't edit `.oxlintrc.json`, `tsconfig.json`, `hk.pkl`, `trivy.yaml`, `.semgrepignore` or `tools/oxlint/` to make a failure go away. Don't add `oxlint-disable`, `@ts-ignore`, `@ts-expect-error`, `nosemgrep`, `trivy:ignore` or `as unknown as`. If you believe a rule is wrong, stop and ask the human.
 - **Read the whole diagnostic.** Every rule message says what to do instead. Do that.
-- The Claude Code hooks in `.claude/` enforce this. They block bypasses, lint each file you edit, and stop you from finishing while `mise run check` fails. CI runs `hk check --all`, so a skipped local hook still fails the PR.
+- Run `mise run check` before finishing. Git hooks check commits and pushes, and CI runs `hk check --all` on every PR. Fix failures instead of bypassing the checks.
 
 ## Tooling
 
@@ -91,7 +91,6 @@ Conventions:
 {%- endif %}
 - `tools/oxlint/anti-slop/`: vendored lint rules (see `UPSTREAM.md`). This is owned code; don't edit it to pass lint.
 - `hk.pkl`: git hooks. Steps call the mise tasks.
-- `.claude/`: agent guardrail hooks.
 
 ## Deploy
 {% if deploy_target == "cloudflare" %}

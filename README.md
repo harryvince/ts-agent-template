@@ -1,6 +1,6 @@
 # ts-agent-template
 
-A [Copier](https://copier.readthedocs.io) template for TypeScript apps that AI agents work on. It provides the rules, standards and layout, plus a feedback loop that agents can't skip.
+A [Copier](https://copier.readthedocs.io) template for TypeScript apps that AI agents work on. Its agent guidance lives in `AGENTS.md`; project checks use mise, Git hooks and CI, regardless of which coding agent edits the project.
 
 ## New project
 
@@ -12,6 +12,8 @@ copier copy --trust gh:harryvince/ts-agent-template ~/dev/my-app
 Copier asks for a name, a description and a deploy target (Cloudflare Workers, a container, or nothing yet). It then runs `git init`, `mise install` and `mise run setup` (bun install + hk hooks).
 
 `--trust` is needed because the template runs those setup commands.
+
+If your coding agent does not read `AGENTS.md` automatically, add it to that agent's project instructions.
 
 ## Pull template improvements into an existing project
 
@@ -34,7 +36,7 @@ This is why the template is Copier rather than "copy the repo": standards keep f
 | Lint | **oxlint** type-aware + [anti-slop](https://github.com/dmmulroy/anti-slop) (vendored, + Effect rules) + [landmines](https://github.com/interfere-inc/landmines) + Effect oxlint presets + banned-imports list that points at the Bun/Effect replacement. `--deny-warnings` |
 | Format | **oxfmt** (switch to `bun fmt` once `bun fmt --doctor` shows everything native) |
 | Git hooks | **hk** (`hk.pkl`): pre-commit = format, lint, typecheck, test, trivy secrets, semgrep, trivy deps (on lockfile change), trivy config (on Containerfile/workflow change); pre-push = `mise run check` + `mise run scan` |
-| Agent enforcement | `AGENTS.md` (+ `CLAUDE.md` → `@AGENTS.md`), and `.claude/` hooks: block `--no-verify`/`HK=0`/npm, ask before rule/config edits or suppressions, lint each edited file, refuse to stop while `mise run check` fails |
+| Agent guidance | `AGENTS.md` gives any coding agent the project commands and conventions. Run `mise run check` before finishing; hk checks commits and pushes, and CI checks every PR |
 | CI | `.github/workflows/ci.yml`: `hk check --all` (same steps as the hooks, all files) + build / image scan; actions pinned by SHA |
 | Cloudflare target | `cf` CLI + `cloudflare.config.ts` + Cloudflare Vite plugin v2, no wrangler |
 | Container target | `Containerfile`: Wolfi build stage → `bun build --compile` → `cgr.dev/chainguard/glibc-dynamic`, `USER nonroot` |
