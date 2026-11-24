@@ -15,6 +15,8 @@ mise run setup          # bun install + hk git hooks
 mise run check          # format:check + lint + typecheck + test. Must pass before you say you're done.
 mise run fix            # oxlint --fix + oxfmt until stable
 mise run scan           # trivy (secrets, deps, config) + semgrep
+mise run review         # sem review certificate for main...HEAD (pass another range to change it)
+mise run review:diff    # sem entity-level diff of uncommitted changes
 mise tasks              # list everything else
 hk check --all          # every git-hook step over every file (this is what CI runs)
 ```
@@ -30,7 +32,7 @@ Use the mise tasks. Don't invent equivalent commands.
 
 ## Tooling
 
-- **mise** owns every tool outside npm: Bun, hk, Trivy, Semgrep, uv{% if deploy_target == "cloudflare" %}, Node (only for `cf`){% endif %}. Pin exact versions in `mise.toml`. Never use global installs, `curl | sh`, brew or apt for project tools.
+- **mise** owns every tool outside npm: Bun, hk, Trivy, Semgrep, sem, uv{% if deploy_target == "cloudflare" %}, Node (only for `cf`){% endif %}. Pin exact versions in `mise.toml`. Never use global installs, `curl | sh`, brew or apt for project tools.
 - **Bun** is the package manager, runtime and bundler. Use `bun add -E` / `bun add -dE` (exact pins), `bunx` and `bun build`. Tests use `@effect/vitest`, running on the Bun runtime (`mise run test`). Never use npm, npx, pnpm or yarn.
 - **Prefer Bun built-ins over packages:** `Bun.serve`, `Bun.file`/`Bun.write`, `Bun.$`, `Bun.Glob`, `Bun.password`, `Bun.hash`, `Bun.sql` (Postgres), `bun:sqlite`, `Bun.redis`, `Bun.s3`, native `.env` loading, native WebSocket, `bun build --compile`. Only add a dependency when neither Bun nor Effect covers it, and say why in the commit message.
 - **Formatting:** oxfmt (`mise run format`). `bun fmt` exists, but stays off until it formats everything natively. Check with `bun fmt --doctor`.
@@ -40,6 +42,11 @@ Use the mise tasks. Don't invent equivalent commands.
   - [landmines](https://github.com/interfere-inc/landmines) recommended set
   - `@effect/tsgo` recommended and effect-native presets
   - a banned-imports list in `.oxlintrc.json` that points at the Bun or Effect replacement
+- **Reviewing changes:** [sem](https://github.com/Ataraxy-Labs/sem) diffs by entity (function, class, method) instead of by line. Before you say you're done with a branch, run `mise run review` and act on it:
+  - **Callers outside this change**: typecheck catches signature breaks, not behaviour changes. Check each listed caller still does the right thing.
+  - **NO TEST REACHES THIS CHANGE**: add a test that does, or say why not.
+  - Use `sem find <name> --callers` / `--refs` and `sem impact --diff HEAD --tests` to find code and the tests a change affects.
+  - `mise run check` is still the gate; `sem check` doesn't replace it. Never run `sem cloud` commands: they upload code. Telemetry is off (`SEM_NO_TELEMETRY` in `mise.toml`).
 - **Typecheck:** TypeScript 7 (`tsc` in Go), patched by `@effect/tsgo` so Effect diagnostics are compile errors. Effect _warnings_ fail the build.
 
 ## Effect

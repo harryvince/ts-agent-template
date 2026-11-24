@@ -11,6 +11,8 @@ uv = "0.13.1"
 # A tool pin, not uvx_args: newer mise rejects uvx_args when installing with --locked (as CI does).
 python = "3.14.10"
 "pipx:semgrep" = "1.186.0"
+# Entity-level diffs and review certificates (`mise run review`).
+"github:Ataraxy-Labs/sem" = "0.30.1"
 {%- if deploy_target == "cloudflare" %}
 # cf (Cloudflare CLI) loads cloudflare.config.ts with Node; Bun is not supported for that yet.
 node = "26.13.1"
@@ -24,6 +26,7 @@ pipx.uvx = true
 # Semgrep rulesets, used by `mise run scan:code` and the pre-commit hook.
 SEMGREP_RULES = "p/default p/typescript p/javascript p/nodejs p/secrets p/github-actions p/dockerfile"
 SEMGREP_SEND_METRICS = "off"
+SEM_NO_TELEMETRY = "1"
 
 [tasks.setup]
 description = "Install dependencies and the mandatory hk git hooks."
@@ -92,6 +95,15 @@ run = "semgrep scan --error --quiet --disable-version-check --skip-unknown-exten
 [tasks.scan]
 description = "All security scans."
 depends = ["scan:secrets", "scan:deps", "scan:config", "scan:code"]
+
+[tasks.review]
+description = "Review certificate for a commit range (sem certify): what changed, callers left behind, tests that reach it."
+usage = 'arg "[range]" default="main...HEAD" help="Commit range to review"'
+run = "sem certify ${usage_range}"
+
+[tasks."review:diff"]
+description = "Entity-level diff of uncommitted changes (sem diff): which functions and classes changed."
+run = "sem diff -v"
 {%- if deploy_target == "cloudflare" %}
 
 [tasks.deploy]

@@ -28,13 +28,14 @@ This is why the template is Copier rather than "copy the repo": standards keep f
 
 | Concern | Choice |
 | --- | --- |
-| Tools outside npm | **mise** (`mise.toml`, `mise.lock`): bun, hk, pkl, trivy, semgrep (pipx via uv, on a pinned Python), node only for Cloudflare's `cf` |
+| Tools outside npm | **mise** (`mise.toml`, `mise.lock`): bun, hk, pkl, trivy, semgrep (pipx via uv, on a pinned Python), sem, node only for Cloudflare's `cf` |
 | Runtime / pkg manager / bundler | **Bun** (`bun build --compile`); `bunfig.toml` pins exact versions and blocks package versions younger than 7 days |
 | Tests | **@effect/vitest** on the Bun runtime (`it.effect`, `layer(...)`, `TestClock`); HTTP tests hit a real `BunHttpServer.layerTest` server |
 | Application code | **Effect 4**. AGENTS.md: check Effect natively, then the installed library's `ai-docs/` + `src/`, then hand-write |
 | Typecheck | TypeScript 7 + `@effect/tsgo` (Effect diagnostics are compile errors; warnings fail) |
 | Lint | **oxlint** type-aware + [anti-slop](https://github.com/dmmulroy/anti-slop) (vendored, + Effect rules) + [landmines](https://github.com/interfere-inc/landmines) + Effect oxlint presets + banned-imports list that points at the Bun/Effect replacement. `--deny-warnings` |
 | Format | **oxfmt** (switch to `bun fmt` once `bun fmt --doctor` shows everything native) |
+| Change review | **[sem](https://github.com/Ataraxy-Labs/sem)**: `mise run review` prints an entity-level review certificate (changed functions, callers left behind, tests that reach the change); CI adds it to each PR's run summary. Telemetry off, `sem cloud` not used |
 | Git hooks | **hk** (`hk.pkl`): pre-commit = format, lint, typecheck, test, trivy secrets, semgrep, trivy deps (on lockfile change), trivy config (on Containerfile/workflow change); pre-push = `mise run check` + `mise run scan` |
 | Agent guidance | `AGENTS.md` gives any coding agent the project commands and conventions. Run `mise run check` before finishing; hk checks commits and pushes, and CI checks every PR |
 | CI | `.github/workflows/ci.yml`: `hk check --all` (same steps as the hooks, all files) + build / image scan; actions pinned by SHA |
