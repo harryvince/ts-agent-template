@@ -10,7 +10,7 @@ for (const target of targets) {
   const dest = `${root}.render/${target}`;
   console.log(`\n=== ${target} → ${dest}`);
   await Bun.$`rm -rf ${dest}`;
-  await Bun.$`copier copy --quiet --trust --defaults --data project_name=demo-${target} --data deploy_target=${target} --data run_setup=true ${root} ${dest}`;
+  await Bun.$`copier copy --quiet --trust --defaults --vcs-ref HEAD --data project_name=demo-${target} --data deploy_target=${target} --data run_setup=true ${root} ${dest}`;
 
   const steps = quick ? ["mise run check"] : ["mise run check", "hk check --all"];
   if (target === "cloudflare") steps.push("mise run build");
