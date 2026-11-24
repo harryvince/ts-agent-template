@@ -110,7 +110,7 @@ Conventions:
 ## Security
 
 - Pre-commit runs Trivy secret scanning and Semgrep (`SEMGREP_RULES` in `mise.toml`). When `bun.lock` changes it also runs the Trivy dependency scan, and when a Containerfile or workflow changes it runs the Trivy config scan.
-- `bunfig.toml` refuses package versions younger than 3 days, and pins dependencies exactly.
+- `bunfig.toml` refuses package versions younger than 7 days, and pins dependencies exactly.
 - Never commit `.env*` or `.dev.vars*`. Read secrets through `Config.redacted`.
 - If a scan flags a dependency, upgrade it. Don't ignore it.
 

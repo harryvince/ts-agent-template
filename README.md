@@ -28,8 +28,8 @@ This is why the template is Copier rather than "copy the repo": standards keep f
 
 | Concern | Choice |
 | --- | --- |
-| Tools outside npm | **mise** (`mise.toml`, `mise.lock`): bun, hk, pkl, trivy, semgrep (uvx), node only for Cloudflare's `cf` |
-| Runtime / pkg manager / bundler | **Bun** (`bun build --compile`); `bunfig.toml` pins exact versions and blocks package versions younger than 3 days |
+| Tools outside npm | **mise** (`mise.toml`, `mise.lock`): bun, hk, pkl, trivy, semgrep (pipx via uv, on a pinned Python), node only for Cloudflare's `cf` |
+| Runtime / pkg manager / bundler | **Bun** (`bun build --compile`); `bunfig.toml` pins exact versions and blocks package versions younger than 7 days |
 | Tests | **@effect/vitest** on the Bun runtime (`it.effect`, `layer(...)`, `TestClock`); HTTP tests hit a real `BunHttpServer.layerTest` server |
 | Application code | **Effect 4**. AGENTS.md: check Effect natively, then the installed library's `ai-docs/` + `src/`, then hand-write |
 | Typecheck | TypeScript 7 + `@effect/tsgo` (Effect diagnostics are compile errors; warnings fail) |
@@ -60,10 +60,10 @@ Versions are pinned in `template/package.json.jinja`, `template/mise.toml.jinja`
 - `effect` = `@effect/platform-bun`
 - `cf` and `@cloudflare/vite-plugin` move together
 
-New versions must be at least 3 days old or `bun install` refuses them. Then run `mise run test`.
+New versions must be at least 7 days old (Semgrep's bun rule requires a guard of at least 7 days) or `bun install` refuses them. Then run `mise run test`.
 
 ### Known temporary bits
 
-- `bunfig.toml` exempts `@interfere/landmines` from the 3-day guard: 0.1.x is needed for the `no-comments` `allow` option that keeps anti-slop's `// SAFETY:` comments legal. Remove the exemption after 2026-11-22.
+- `bunfig.toml` exempts `@interfere/landmines` from the 7-day guard: 0.1.x is needed for the `no-comments` `allow` option that keeps anti-slop's `// SAFETY:` comments legal. Remove the exemption after 2026-11-26.
 - `cf` and `@cloudflare/vite-plugin` v2 are release candidates.
 - To try tsrs instead of tsgolint for type-aware lint, use `effect-tsgo --tsrs-lint oxlint ...` (experimental, same results and similar speed here).

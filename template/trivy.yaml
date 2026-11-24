@@ -3,8 +3,11 @@ severity:
   - HIGH
   - CRITICAL
 exit-code: 1
-skip-dirs:
-  - node_modules
-  - .cloudflare
+scan:
+  skip-dirs:
+    - node_modules
+    - .cloudflare
+    # mise's lockfiles for the dev toolchain (e.g. Semgrep's own Python deps), not app dependencies.
+    - .mise
 pkg:
   include-dev-deps: true
